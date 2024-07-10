@@ -9,8 +9,9 @@ from data_loader import load_data  # 请确保这部分代码已经在data_loade
 # 设置参数
 data_dir = 'data'
 batch_size = 32
-num_epochs = 10
+num_epochs = 20
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+model_path = 'airplane_classifier_vgg16.pth'  # 已保存模型的路径
 
 # 检查是否有可用的GPU
 if not torch.cuda.is_available():
@@ -23,10 +24,16 @@ train_loader, num_classes = load_data(data_dir, batch_size)
 model = build_model(num_classes)
 model = model.to(device)
 
+# 加载已保存的模型权重
+if model_path:
+    model.load_state_dict(torch.load(model_path))
+    print("Loaded model weights from", model_path)
+
 # 设置优化器和损失函数
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.SGD(model.classifier.parameters(), lr=0.001, momentum=0.9)
 exp_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=7, gamma=0.1)
+
 
 # 训练模型
 def train_model(model, criterion, optimizer, scheduler, num_epochs=25):
@@ -76,6 +83,5 @@ def train_model(model, criterion, optimizer, scheduler, num_epochs=25):
 
     return model
 
+
 model = train_model(model, criterion, optimizer, exp_lr_scheduler, num_epochs=num_epochs)
-
-
