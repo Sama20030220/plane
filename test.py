@@ -4,7 +4,7 @@ from PIL import Image
 from model import build_model
 
 # 设置参数
-model_path = 'airplane_classifier_vgg16.pth'
+model_path = 'airplane_classifier_vgg16(0.001).pth'
 image_path = 'img3.jpg'
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
