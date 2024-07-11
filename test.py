@@ -1,7 +1,7 @@
 import torch
 from torchvision import transforms
 from PIL import Image
-from model import build_model  # 请确保这部分代码已经在model模块中定义
+from model import build_model
 
 # 设置参数
 model_path = 'airplane_classifier_vgg16.pth'

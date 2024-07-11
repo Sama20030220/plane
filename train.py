@@ -3,10 +3,10 @@ import torch.optim as optim
 from torch.optim import lr_scheduler
 import torch.nn as nn
 import time
-from model import build_model  # 请确保这部分代码已经在model模块中定义
-from data_loader import load_data  # 请确保这部分代码已经在data_loader模块中定义
+from model import build_model
+from data_loader import load_data
 
-# 设置参数
+
 data_dir = 'data'
 batch_size = 32
 num_epochs = 20
@@ -25,18 +25,18 @@ model = build_model(num_classes)
 model = model.to(device)
 
 # 加载已保存的模型权重
-if model_path:
-    model.load_state_dict(torch.load(model_path))
-    print("Loaded model weights from", model_path)
+# if model_path:
+#     model.load_state_dict(torch.load(model_path))
+#     print("Loaded model weights from", model_path)
 
 # 设置优化器和损失函数
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.SGD(model.classifier.parameters(), lr=0.001, momentum=0.9)
-exp_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=7, gamma=0.1)
+# exp_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=7, gamma=0.1)
 
 
 # 训练模型
-def train_model(model, criterion, optimizer, scheduler, num_epochs=25):
+def train_model(model, criterion, optimizer,  num_epochs=25):
     since = time.time()
 
     for epoch in range(num_epochs):
@@ -68,7 +68,7 @@ def train_model(model, criterion, optimizer, scheduler, num_epochs=25):
             running_loss += loss.item() * inputs.size(0)
             running_corrects += torch.sum(preds == labels.data)
 
-        scheduler.step()
+        # scheduler.step()
 
         epoch_loss = running_loss / len(train_loader.dataset)
         epoch_acc = running_corrects.double() / len(train_loader.dataset)
@@ -84,4 +84,4 @@ def train_model(model, criterion, optimizer, scheduler, num_epochs=25):
     return model
 
 
-model = train_model(model, criterion, optimizer, exp_lr_scheduler, num_epochs=num_epochs)
+model = train_model(model, criterion, optimizer, num_epochs=num_epochs)
