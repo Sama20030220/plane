@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>飞机类型识别</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: auto;
+            text-align: center;
+        }
+        h1 {
+            margin-top: 50px;
+        }
+        img {
+            max-width: 100%;
+            height: auto;
+            margin: 20px 0;
+        }
+        .result {
+            font-size: 1.5em;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>飞机类型识别</h1>
+
+    <input type="file" id="fileInput" accept="image/*">
+    <button onclick="uploadImage()">上传图片</button>
+    <div id="imageContainer"></div>
+    <button onclick="analyzeImage()" disabled id="analyzeButton">开始分析</button>
+    <div id="result" class="result"></div>
+
+    <script>
+        function uploadImage() {
+            const input = document.getElementById('fileInput');
+            const file = input.files[0];
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                document.getElementById('imageContainer').innerHTML = `<img src="${e.target.result}" alt="Uploaded Image">`;
+                document.getElementById('analyzeButton').disabled = false;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        async function analyzeImage() {
+            const formData = new FormData();
+            const input = document.getElementById('fileInput');
+            formData.append('file', input.files[0]);
+            const response = await fetch('/predict', {
+                method: 'POST',
+                body: formData
+            });
+            const data = await response.json();
+            document.getElementById('result').innerText = `预测结果: ${data.predicted_class}`;
+        }
+    </script>
+</body>
+</html>
