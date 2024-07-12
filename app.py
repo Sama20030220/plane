@@ -14,6 +14,7 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 preprocess = transforms.Compose([
     transforms.Resize(256),
     transforms.CenterCrop(224),
+    transforms.Lambda(lambda img: img.convert("RGB") if img.mode == "RGBA" else img),  # 如果是RGBA则转换为RGB
     transforms.ToTensor(),
     transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
 ])
@@ -37,11 +38,11 @@ def predict_image(model, image_file):
 
     with torch.no_grad():
         outputs = model(image)
-        _, preds = torch.max(outputs, 1)
-        pred_index = preds.item()
-        if pred_index not in class_names:
-            return "这并不是飞机，请重新选择图片检测"
-    return class_names[preds.item()]
+        probabilities = torch.nn.functional.softmax(outputs, dim=1)  # 应用softmax获取概率
+        values, indices = torch.topk(probabilities, k=len(class_names))  # 获取所有类别的概率和索引
+        probabilities = probabilities.cpu().numpy()[0]  # 将概率张量转换为numpy数组
+        results = {class_names[i]: float(probabilities[i]) for i in range(len(class_names))}
+        return results
 
 
 @app.route('/', methods=['GET'])
@@ -60,7 +61,12 @@ def predict():
         num_classes = 3  # 请根据实际情况设置类别数量
         model = load_model(model_path, num_classes)
         prediction = predict_image(model, file)
-        return jsonify({'predicted_class': prediction})
+
+        # 检查所有类别的概率是否都低于65%
+        if all(prob < 0.65 for prob in prediction.values()):
+            return jsonify({"message": "这张图片不符合识别规范，请选择其他图片"})
+        else:
+            return jsonify(prediction)
 
 
 

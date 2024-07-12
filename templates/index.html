@@ -55,7 +55,17 @@
                 body: formData
             });
             const data = await response.json();
-            document.getElementById('result').innerText = `预测结果: ${data.predicted_class}`;
+
+            // 检查数据是否包含message字段，这表明服务器返回的是一个特定消息
+            if ('message' in data) {
+                document.getElementById('result').innerText = data.message;
+            } else {
+                let resultText = "预测结果:\n";
+                for (const [className, probability] of Object.entries(data)) {
+                    resultText += `${className}: ${probability.toFixed(2)}%\n`;
+                }
+                document.getElementById('result').innerText = resultText;
+            }
         }
     </script>
 </body>
