@@ -5,12 +5,16 @@
     <title>飞机类型识别</title>
     <style>
         body {
+            background-color: #F5F5DC;
+            color: #333333;
             font-family: Arial, sans-serif;
             max-width: 800px;
             margin: auto;
+            padding: 20px;
             text-align: center;
         }
         h1 {
+            color: #FF6347;
             margin-top: 50px;
         }
         img {
@@ -19,20 +23,41 @@
             margin: 20px 0;
         }
         .result {
+            color: #00BFFF;
             font-size: 1.5em;
             margin-top: 20px;
+        }
+        .custom-file-input {
+            position: absolute;
+            z-index: -1;
+            opacity: 0;
+        }
+        .custom-button {
+            background-color: #4CAF50;
+            border: none;
+            color: white;
+            padding: 15px 32px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        .custom-button:hover {
+            background-color: #45a049;
         }
     </style>
 </head>
 <body>
     <h1>飞机类型识别</h1>
-
-    <input type="file" id="fileInput" accept="image/*">
-    <button onclick="uploadImage()">上传图片</button>
+    <label for="fileInput" class="custom-button">选择文件</label>
+    <input type="file" id="fileInput" class="custom-file-input" accept="image/*">
+    <button class="custom-button" onclick="uploadImage()">上传图片</button>
     <div id="imageContainer"></div>
-    <button onclick="analyzeImage()" disabled id="analyzeButton">开始分析</button>
+    <button class="custom-button" onclick="analyzeImage()" disabled id="analyzeButton">开始分析</button>
     <div id="result" class="result"></div>
-
 
     <script>
         function uploadImage() {
@@ -56,7 +81,6 @@
             });
             const data = await response.json();
 
-            // 检查数据是否包含message字段，这表明服务器返回的是一个特定消息
             if ('message' in data) {
                 document.getElementById('result').innerText = data.message;
             } else {

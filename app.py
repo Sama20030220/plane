@@ -2,12 +2,12 @@ from flask import Flask, request, jsonify, render_template
 import torch
 from torchvision import transforms
 from PIL import Image
-from model import build_model
+from AITrain.model import build_model
 
 app = Flask(__name__, static_folder='static', template_folder='templates')
 
 # 设置参数
-model_path = 'airplane_classifier_vgg16(0.001).pth'
+model_path = 'AITrain/airplane_classifier_vgg16(0.001).pth'
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 # 定义图像预处理步骤

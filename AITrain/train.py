@@ -7,7 +7,7 @@ from model import build_model
 from data_loader import load_data
 
 
-data_dir = 'data'
+data_dir = '../data'
 batch_size = 32
 num_epochs = 20
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
