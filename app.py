@@ -188,6 +188,34 @@ def home():
     return render_template('Rec_Plane.html', histories=histories_data)
 
 
+@app.route('/api/detection-counts')
+@login_required
+def detection_counts():
+    from datetime import datetime, timedelta
+
+    end_time = datetime.now()
+    start_time = end_time - timedelta(minutes=10)
+
+    # 查询数据库中这段时间内的检测记录
+    detections = RecognitionHistory.query.filter(
+        RecognitionHistory.timestamp.between(start_time, end_time)
+    ).all()
+
+    # 按每十分钟的间隔汇总检测次数
+    counts = {}
+    current_bucket = start_time
+    for detection in detections:
+        bucket = current_bucket + timedelta(minutes=10)
+        if detection.timestamp < bucket:
+            counts[current_bucket] = counts.get(current_bucket, 0) + 1
+        else:
+            current_bucket = bucket
+            counts[current_bucket] = 1
+
+    # 返回数据
+    return jsonify(counts)
+
+
 @app.route('/predict', methods=['POST'])
 @login_required
 def predict():
@@ -197,29 +225,21 @@ def predict():
     if file.filename == '':
         return jsonify({'error': 'No selected file'}), 400
     if file:
-        # num__classes = 3  # 请根据实际情况设置类别数量
-        # model_predict = load_model(model_path, num__classes)
         prediction = predict_image(model, file)
-
         # 检查所有类别的概率是否都低于65%
         if all(prob < 0.65 for prob in prediction.values()):
             return jsonify({"message": "这张图片不符合识别规范，请选择其他图片"})
-
         if not current_user.is_authenticated:
             return jsonify({"error": "User is not authenticated"}), 401
-
         # 保存图片到静态文件夹
         filename = secure_filename(file.filename)
         file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         save_file(file, file_path)
-
         # 获得相对于static目录的路径
         relative_path = os.path.relpath(file_path, start=app.root_path)
         relative_path = os.path.join('static', os.path.basename(relative_path))
-
         # 转换路径为 ../static/img.jpg 的形式
         relative_path = '../' + relative_path
-
         his_tory = RecognitionHistory(user_id=current_user.id, image_path=relative_path, prediction_result=prediction)
         db.session.add(his_tory)
         db.session.commit()
