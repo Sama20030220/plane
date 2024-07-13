@@ -2,14 +2,17 @@ import torch
 from flask_sqlalchemy import SQLAlchemy
 from torchvision import transforms
 from PIL import Image
+from werkzeug.utils import secure_filename
+
 from AITrain.model import build_model
 from flask import Flask, request, jsonify, render_template, url_for, redirect
-from flask_login import LoginManager, UserMixin, login_required, logout_user, login_user
+from flask_login import LoginManager, UserMixin, login_required, logout_user, login_user, current_user
 import os
 app = Flask(__name__, static_folder='static', template_folder='templates')
 app.config['SECRET_KEY'] = '123456'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:123456@localhost/Plane_User'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['UPLOAD_FOLDER'] = os.path.join(os.getcwd(), 'static')
 
 # 初始化Flask-Login
 db = SQLAlchemy(app)
@@ -27,6 +30,14 @@ class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(100), unique=True, nullable=False)
     password = db.Column(db.String(100), nullable=False)
+
+
+class RecognitionHistory(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    image_path = db.Column(db.String(255), nullable=False)
+    prediction_result = db.Column(db.JSON, nullable=False)
+    timestamp = db.Column(db.DateTime, default=db.func.current_timestamp())
 
 
 # 设置参数
@@ -80,7 +91,7 @@ def login():
         username = request.form.get('username')
         password = request.form.get('password')
         user = User.query.filter_by(username=username).first()
-        if user and user.password == password:  # 简化版密码验证，实际应使用哈希
+        if user and user.password == password:
             login_user(user)
             return redirect(url_for('home'))
         else:
@@ -119,6 +130,7 @@ def home():
 
 
 @app.route('/predict', methods=['POST'])
+@login_required
 def predict():
     if 'file' not in request.files:
         return jsonify({'error': 'No file part'}), 400
@@ -133,12 +145,20 @@ def predict():
         # 检查所有类别的概率是否都低于65%
         if all(prob < 0.65 for prob in prediction.values()):
             return jsonify({"message": "这张图片不符合识别规范，请选择其他图片"})
-        else:
-            return jsonify(prediction)
+        if not current_user.is_authenticated:
+            return jsonify({"error": "User is not authenticated"}), 401
+        # 保存图片到静态文件夹
+        filename = secure_filename(file.filename)
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(file_path)
+        # 存储识别历史到数据库
+        history = RecognitionHistory(user_id=current_user.id, image_path=file_path, prediction_result=prediction)
+        db.session.add(history)
+        db.session.commit()
+        return jsonify(prediction)
 
 
 if __name__ == "__main__":
     with app.app_context():
-        if not os.path.exists('Plane_User.db'):
-            db.create_all()
+        db.create_all()  # 创建所有定义的数据库表
     app.run(debug=True)
