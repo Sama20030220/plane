@@ -1,10 +1,33 @@
-from flask import Flask, request, jsonify, render_template
 import torch
+from flask_sqlalchemy import SQLAlchemy
 from torchvision import transforms
 from PIL import Image
 from AITrain.model import build_model
-
+from flask import Flask, request, jsonify, render_template, url_for, redirect
+from flask_login import LoginManager, UserMixin, login_required, logout_user, login_user
+import os
 app = Flask(__name__, static_folder='static', template_folder='templates')
+app.config['SECRET_KEY'] = '123456'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:123456@localhost/Plane_User'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# 初始化Flask-Login
+db = SQLAlchemy(app)
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'
+
+
+# 用户类，继承自UserMixin
+# 数据库模型 - 用户表
+class User(UserMixin, db.Model):
+    def __init__(self, username, password):
+        self.username = username
+        self.password = password
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(100), unique=True, nullable=False)
+    password = db.Column(db.String(100), nullable=False)
+
 
 # 设置参数
 model_path = 'AITrain/airplane_classifier_vgg16(0.001).pth'
@@ -45,9 +68,54 @@ def predict_image(model, image_file):
         return results
 
 
-@app.route('/', methods=['GET'])
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
+
+
+# 登录路由
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        user = User.query.filter_by(username=username).first()
+        if user and user.password == password:  # 简化版密码验证，实际应使用哈希
+            login_user(user)
+            return redirect(url_for('home'))
+        else:
+            return render_template('login.html', error="Invalid username or password")
+    return render_template('login.html')
+
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        existing_user = User.query.filter_by(username=username).first()
+        if existing_user:
+            return render_template('register.html', error="Username already exists.")
+        new_user = User(username=username, password=password)  # 密码应加密存储
+        db.session.add(new_user)
+        db.session.commit()
+        return redirect(url_for('login'))
+    return render_template('register.html')
+
+
+
+@app.route('/logout')
+@login_required
+def logout():
+    logout_user()
+    return redirect(url_for('login'))
+
+
+# 主页路由，现在需要登录才能访问
+@app.route('/')
+@login_required
 def home():
-    return render_template('index.html')
+    return render_template('Rec_Plane.html')
 
 
 @app.route('/predict', methods=['POST'])
@@ -69,6 +137,8 @@ def predict():
             return jsonify(prediction)
 
 
-
 if __name__ == "__main__":
+    with app.app_context():
+        if not os.path.exists('Plane_User.db'):
+            db.create_all()
     app.run(debug=True)

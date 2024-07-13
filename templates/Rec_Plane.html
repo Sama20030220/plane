@@ -48,6 +48,11 @@
         .custom-button:hover {
             background-color: #45a049;
         }
+        .top-right-button {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+        }
     </style>
 </head>
 <body>
@@ -58,7 +63,7 @@
     <div id="imageContainer"></div>
     <button class="custom-button" onclick="analyzeImage()" disabled id="analyzeButton">开始分析</button>
     <div id="result" class="result"></div>
-
+    <button class="custom-button top-right-button" onclick="location.href='/logout';">登出</button>
     <script>
         function uploadImage() {
             const input = document.getElementById('fileInput');
