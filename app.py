@@ -145,6 +145,14 @@ def logout():
     return redirect(url_for('login'))
 
 
+@app.route('/get_usage_stats')
+@login_required
+def get_usage_stats():
+    # 查询数据库中当前用户的检测历史记录数量
+    total_uses = RecognitionHistory.query.filter_by(user_id=current_user.id).count()
+    return jsonify({'total_uses': total_uses})
+
+
 # 在Flask应用中增加一个新路由
 @app.route('/History')
 @login_required

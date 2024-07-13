@@ -81,6 +81,23 @@
             top: 20px;
             right: 20px;
         }
+        .usage-stats {
+            position: absolute;
+            top: 120px; /* 调整这个值来改变其与顶部的距离 */
+            right: 20px; /* 与右边缘的距离 */
+            width: 150px; /* 宽度 */
+            height: 100px; /* 高度 */
+            background-color: #FFFACD; /* 背景颜色，与.main-content相同 */
+            border: 1px solid #D3D3D3; /* 边框，与.main-content和.history-sidebar相同 */
+            padding: 10px; /* 内边距 */
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            justify-content: center; /* 文本垂直居中 */
+            align-items: center;
+            font-family: Arial, sans-serif; /* 字体，与body相同 */
+            color: #333333; /* 文本颜色，与body相同 */
+        }
     </style>
 </head>
 <body>
@@ -115,6 +132,7 @@
         <button class="custom-button top-right-button" onclick="location.href='/logout';">登出</button>
         <input type="file" id="fileInput" style="display: none;">
     </div>
+    <div id="usageStats" class="usage-stats"></div>
     <script>
         function uploadImage() {
             const input = document.getElementById('fileInput');
@@ -147,6 +165,14 @@
                 document.getElementById('result').innerText = resultText;
             }
         }
+        async function getUsageStats() {
+            const response = await fetch('/get_usage_stats', {
+                method: 'GET'
+            });
+            const data = await response.json();
+            document.getElementById('usageStats').innerText = `总检测次数: ${data.total_uses}`;
+        }
+        window.addEventListener('load', getUsageStats);
     </script>
 </body>
 </html>
