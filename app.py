@@ -1,14 +1,12 @@
-import requests
 import torch
+import os
 from flask_sqlalchemy import SQLAlchemy
 from torchvision import transforms
 from PIL import Image
 from werkzeug.utils import secure_filename
-
 from AITrain.model import build_model
 from flask import Flask, request, jsonify, render_template, url_for, redirect
 from flask_login import LoginManager, UserMixin, login_required, logout_user, login_user, current_user
-import os
 
 app = Flask(__name__, static_folder='static', template_folder='templates')
 app.config['SECRET_KEY'] = '123456'
@@ -86,25 +84,22 @@ def save_file(file, file_path):
     try:
         # 重置文件指针
         file.seek(0)
-
         # 手动读取文件流并写入磁盘
+        relative_path = os.path.relpath(file_path,
+                                        start=app.root_path)
+        relative_path = os.path.join('static', os.path.basename(relative_path))
         with open(file_path, 'wb') as f:
             while True:
                 chunk = file.read(4096)
                 if not chunk:
                     break
                 f.write(chunk)
-
-        # 检查文件大小
         file_size = os.path.getsize(file_path)
         if file_size == 0:
             raise IOError("File appears to be empty after saving.")
-
         print(f"File saved successfully. Size: {file_size} bytes")
     except Exception as e:
         print(f"Error saving file: {e}")
-
-
 
 
 @login_manager.user_loader
@@ -126,6 +121,7 @@ def login():
         else:
             return render_template('login.html', error="Invalid username or password")
     return render_template('login.html')
+
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -150,20 +146,20 @@ def logout():
 
 
 # 在Flask应用中增加一个新路由
-@app.route('/history')
+@app.route('/History')
 @login_required
 def history():
     histories = RecognitionHistory.query.filter_by(user_id=current_user.id).all()
-    print('hhh')
-    if histories:
-        return jsonify([{
-            'id': history.id,
-            'image_path': history.image_path,
-            'prediction_result': history.prediction_result,
-            'timestamp': history.timestamp.strftime("%Y-%m-%d %H:%M:%S")
-        } for history in histories])
-    else:
-        return jsonify([])  # 返回一个空的JSON数组
+
+    # 转换路径以便前端可以正确解析
+    histories_data = [{
+        'id': History.id,
+        'image_path': '../' + History.image_path.replace('\\', '/').lstrip('static/'),  # 替换反斜杠并去除 'static/' 前缀
+        'prediction_result': History.prediction_result,
+        'timestamp': History.timestamp.strftime("%Y-%m-%d %H:%M:%S")
+    } for History in histories]
+
+    return jsonify(histories_data)
 
 
 # 主页路由，现在需要登录才能访问
@@ -172,13 +168,12 @@ def history():
 def home():
     histories = RecognitionHistory.query.filter_by(user_id=current_user.id).all()
     histories_data = [{
-        'id': history.id,
-        'image_path': history.image_path,
-        'prediction_result': history.prediction_result,
-        'timestamp': history.timestamp.strftime("%Y-%m-%d %H:%M:%S")
-    } for history in histories]
+        'id': History.id,
+        'image_path': History.image_path,
+        'prediction_result': History.prediction_result,
+        'timestamp': History.timestamp.strftime("%Y-%m-%d %H:%M:%S")
+    } for History in histories]
     return render_template('Rec_Plane.html', histories=histories_data)
-
 
 
 @app.route('/predict', methods=['POST'])
@@ -197,16 +192,24 @@ def predict():
         # 检查所有类别的概率是否都低于65%
         if all(prob < 0.65 for prob in prediction.values()):
             return jsonify({"message": "这张图片不符合识别规范，请选择其他图片"})
+
         if not current_user.is_authenticated:
             return jsonify({"error": "User is not authenticated"}), 401
+
         # 保存图片到静态文件夹
         filename = secure_filename(file.filename)
         file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         save_file(file, file_path)
-        # file.save(file_path)
-        # 存储识别历史到数据库
-        history = RecognitionHistory(user_id=current_user.id, image_path=file_path, prediction_result=prediction)
-        db.session.add(history)
+
+        # 获得相对于static目录的路径
+        relative_path = os.path.relpath(file_path, start=app.root_path)
+        relative_path = os.path.join('static', os.path.basename(relative_path))
+
+        # 转换路径为 ../static/img.jpg 的形式
+        relative_path = '../' + relative_path
+
+        his_tory = RecognitionHistory(user_id=current_user.id, image_path=relative_path, prediction_result=prediction)
+        db.session.add(his_tory)
         db.session.commit()
         return jsonify(prediction)
 
