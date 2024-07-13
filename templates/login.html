@@ -74,6 +74,28 @@
             width: 100% !important;
             height: 100% !important;
         }
+        .airplane-container {
+            position: absolute;
+            top: 50px; /* 设置飞机位置 */
+            left: 50px;
+            width: 100px; /* 设置容器大小 */
+            height: 100px;
+            overflow: hidden; /* 隐藏超出容器的部分 */
+        }
+
+        .airplane {
+            width: 100%; /* 使图片适应容器 */
+            height: 100%;
+        }
+
+        .animation {
+            animation: fly 5s linear infinite;
+        }
+
+        @keyframes fly {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(100vw); }
+        }
     </style>
 </head>
 <body>
@@ -90,6 +112,10 @@
             <input type="submit" value="登录">
         </form>
         <p>没有账号？<a href="{{ url_for('register') }}">注册</a></p>
+    </div>
+    <!-- 添加卡通飞机的SVG图像 -->
+    <div class="airplane-container animation">
+        <img src="{{ url_for('static', filename='plane.svg') }}" class="airplane" alt="Airplane">
     </div>
     <div class="chart-container">
         <canvas id="recognitionChart"></canvas>
