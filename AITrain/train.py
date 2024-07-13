@@ -26,8 +26,8 @@ model = model.to(device)
 
 # 加载已保存的模型权重
 # if model_paths:
-#     model.load_state_dict(torch.load(model_paths))
-#     print("Loaded model weights from", model_paths)
+#     model_predict.load_state_dict(torch.load(model_paths))
+#     print("Loaded model_predict weights from", model_paths)
 
 # 设置优化器和损失函数
 criterion = nn.CrossEntropyLoss()

@@ -58,21 +58,25 @@ class_names = {0: '直升飞机', 1: '战斗飞机', 2: '客机'}
 
 
 # 加载模型
-def load_model(model_paths, num_classes):
-    model = build_model(num_classes)
-    model.load_state_dict(torch.load(model_paths))
-    model = model.to(device)
-    model.eval()
-    return model
+def load_model(model_paths, num__classes):
+    model_load = build_model(num__classes)
+    model_load.load_state_dict(torch.load(model_paths))
+    model_load = model_load.to(device)
+    model_load.eval()
+    return model_load
+
+
+num_classes = 3  # 请根据实际情况设置类别数量
+model = load_model(model_path, num_classes)
 
 
 # 预测上传的图像
-def predict_image(model, image_file):
+def predict_image(model_predict, image_file):
     image = Image.open(image_file)
     image = preprocess(image).unsqueeze(0).to(device)
 
     with torch.no_grad():
-        outputs = model(image)
+        outputs = model_predict(image)
         probabilities = torch.nn.functional.softmax(outputs, dim=1)  # 应用softmax获取概率
         values, indices = torch.topk(probabilities, k=len(class_names))  # 获取所有类别的概率和索引
         probabilities = probabilities.cpu().numpy()[0]  # 将概率张量转换为numpy数组
@@ -193,8 +197,8 @@ def predict():
     if file.filename == '':
         return jsonify({'error': 'No selected file'}), 400
     if file:
-        num_classes = 3  # 请根据实际情况设置类别数量
-        model = load_model(model_path, num_classes)
+        # num__classes = 3  # 请根据实际情况设置类别数量
+        # model_predict = load_model(model_path, num__classes)
         prediction = predict_image(model, file)
 
         # 检查所有类别的概率是否都低于65%
