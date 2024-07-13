@@ -1,3 +1,4 @@
+import requests
 import torch
 from flask_sqlalchemy import SQLAlchemy
 from torchvision import transforms
@@ -8,6 +9,7 @@ from AITrain.model import build_model
 from flask import Flask, request, jsonify, render_template, url_for, redirect
 from flask_login import LoginManager, UserMixin, login_required, logout_user, login_user, current_user
 import os
+
 app = Flask(__name__, static_folder='static', template_folder='templates')
 app.config['SECRET_KEY'] = '123456'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:123456@localhost/Plane_User'
@@ -27,6 +29,7 @@ class User(UserMixin, db.Model):
     def __init__(self, username, password):
         self.username = username
         self.password = password
+
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(100), unique=True, nullable=False)
     password = db.Column(db.String(100), nullable=False)
@@ -79,6 +82,31 @@ def predict_image(model, image_file):
         return results
 
 
+def save_file(file, file_path):
+    try:
+        # 重置文件指针
+        file.seek(0)
+
+        # 手动读取文件流并写入磁盘
+        with open(file_path, 'wb') as f:
+            while True:
+                chunk = file.read(4096)
+                if not chunk:
+                    break
+                f.write(chunk)
+
+        # 检查文件大小
+        file_size = os.path.getsize(file_path)
+        if file_size == 0:
+            raise IOError("File appears to be empty after saving.")
+
+        print(f"File saved successfully. Size: {file_size} bytes")
+    except Exception as e:
+        print(f"Error saving file: {e}")
+
+
+
+
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
@@ -93,11 +121,11 @@ def login():
         user = User.query.filter_by(username=username).first()
         if user and user.password == password:
             login_user(user)
-            return redirect(url_for('home'))
+            next_page = request.args.get('next')
+            return redirect(next_page or url_for('home'))  # 修改这里
         else:
             return render_template('login.html', error="Invalid username or password")
     return render_template('login.html')
-
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -114,7 +142,6 @@ def register():
     return render_template('register.html')
 
 
-
 @app.route('/logout')
 @login_required
 def logout():
@@ -122,11 +149,36 @@ def logout():
     return redirect(url_for('login'))
 
 
+# 在Flask应用中增加一个新路由
+@app.route('/history')
+@login_required
+def history():
+    histories = RecognitionHistory.query.filter_by(user_id=current_user.id).all()
+    print('hhh')
+    if histories:
+        return jsonify([{
+            'id': history.id,
+            'image_path': history.image_path,
+            'prediction_result': history.prediction_result,
+            'timestamp': history.timestamp.strftime("%Y-%m-%d %H:%M:%S")
+        } for history in histories])
+    else:
+        return jsonify([])  # 返回一个空的JSON数组
+
+
 # 主页路由，现在需要登录才能访问
 @app.route('/')
 @login_required
 def home():
-    return render_template('Rec_Plane.html')
+    histories = RecognitionHistory.query.filter_by(user_id=current_user.id).all()
+    histories_data = [{
+        'id': history.id,
+        'image_path': history.image_path,
+        'prediction_result': history.prediction_result,
+        'timestamp': history.timestamp.strftime("%Y-%m-%d %H:%M:%S")
+    } for history in histories]
+    return render_template('Rec_Plane.html', histories=histories_data)
+
 
 
 @app.route('/predict', methods=['POST'])
@@ -150,7 +202,8 @@ def predict():
         # 保存图片到静态文件夹
         filename = secure_filename(file.filename)
         file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        file.save(file_path)
+        save_file(file, file_path)
+        # file.save(file_path)
         # 存储识别历史到数据库
         history = RecognitionHistory(user_id=current_user.id, image_path=file_path, prediction_result=prediction)
         db.session.add(history)

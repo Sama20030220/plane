@@ -85,14 +85,17 @@
 </head>
 <body>
     <div class="history-sidebar">
-        <h2>历史记录</h2>
-        <!-- 这里放置历史记录的内容 -->
-        <ul>
-            <li>记录1</li>
-            <li>记录2</li>
-            <!-- 更多记录 -->
-        </ul>
-    </div>
+    <h2>历史记录</h2>
+    <ul>
+        {% for history in histories %}
+        <li>
+            <span>{{ history.timestamp }}</span>
+            <img src="{{ url_for('static', filename=history.image_path) }}" alt="识别的图片">
+            <p>预测结果: {{ history.prediction_result }}</p>
+        </li>
+        {% endfor %}
+    </ul>
+</div>
     <div class="main-content">
         <div class="centered-elements">
             <h1>飞机类型识别</h1>
