@@ -7,6 +7,9 @@ from werkzeug.utils import secure_filename
 from AITrain.model import build_model
 from flask import Flask, request, jsonify, render_template, url_for, redirect
 from flask_login import LoginManager, UserMixin, login_required, logout_user, login_user, current_user
+from sqlalchemy import func
+from datetime import datetime
+
 
 app = Flask(__name__, static_folder='static', template_folder='templates')
 app.config['SECRET_KEY'] = '123456'
@@ -188,32 +191,15 @@ def home():
     return render_template('Rec_Plane.html', histories=histories_data)
 
 
-@app.route('/api/detection-counts')
-@login_required
-def detection_counts():
-    from datetime import datetime, timedelta
+@app.route('/api/detection-counts', methods=['GET'])
+def get_detection_counts():
+    detection_counts = db.session.query(
+        func.date_format(RecognitionHistory.timestamp, '%Y-%m-%d %H:%i').label('time'),
+        func.count(RecognitionHistory.id).label('count')
+    ).group_by('time').all()
 
-    end_time = datetime.now()
-    start_time = end_time - timedelta(minutes=10)
-
-    # 查询数据库中这段时间内的检测记录
-    detections = RecognitionHistory.query.filter(
-        RecognitionHistory.timestamp.between(start_time, end_time)
-    ).all()
-
-    # 按每十分钟的间隔汇总检测次数
-    counts = {}
-    current_bucket = start_time
-    for detection in detections:
-        bucket = current_bucket + timedelta(minutes=10)
-        if detection.timestamp < bucket:
-            counts[current_bucket] = counts.get(current_bucket, 0) + 1
-        else:
-            current_bucket = bucket
-            counts[current_bucket] = 1
-
-    # 返回数据
-    return jsonify(counts)
+    result = [{'time': time, 'count': count} for time, count in detection_counts]
+    return jsonify(result)
 
 
 @app.route('/predict', methods=['POST'])
